@@ -1,0 +1,29 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Stock {
+  id String @id @default(uuid())
+  symbol String @unique
+  price Float
+  change Float
+  percentChange Float
+  highPrice Float
+  lowPrice Float
+  openPrice Float
+  previousClosePrice Float
+  fetchedAt DateTime @default(now())
+
+  @@index([symbol, fetchedAt(sort: Desc)]) // to make last 10 stocks query faster
+}
