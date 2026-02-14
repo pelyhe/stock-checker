@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { FinnhubModule } from 'src/finnhub/finnhub.module';
-import { StockService } from './stock.service';
+import { PrismaModule } from 'src/prisma/prisma.module';
 import { StockController } from './stock.controller';
+import { StockService } from './stock.service';
 
 @Module({
-  imports: [FinnhubModule],
+  imports: [FinnhubModule, PrismaModule],
   providers: [StockService],
   exports: [StockService],
   controllers: [StockController],

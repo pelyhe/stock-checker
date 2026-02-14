@@ -11,11 +11,10 @@ export class FinnhubService {
     this.api_key = this.configService.get('FINNHUB_API_KEY') ?? '';
   }
 
-  async getStockPrice(symbol: string): Promise<void> {
+  async getQuote(symbol: string): Promise<FinnhubQuoteResponse> {
     const response = await fetch(
       `${this.base_url}/quote?symbol=${symbol}&token=${this.api_key}`,
     );
-    const data = (await response.json()) as FinnhubQuoteResponse;
-    console.log(data);
+    return (await response.json()) as FinnhubQuoteResponse;
   }
 }

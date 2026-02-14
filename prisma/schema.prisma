@@ -7,6 +7,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -15,7 +16,7 @@ datasource db {
 
 model Stock {
   id String @id @default(uuid())
-  symbol String @unique
+  symbol String 
   price Float
   change Float
   percentChange Float

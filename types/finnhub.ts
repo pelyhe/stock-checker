@@ -8,3 +8,10 @@ export interface FinnhubQuoteResponse {
   pc: number; // Previous close price
   t: number; // Timestamp
 }
+
+export interface StockData {
+  symbol: string;
+  currentPrice: number;
+  fetchedAt: Date;
+  movingAverage: number;
+}
