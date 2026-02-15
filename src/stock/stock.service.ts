@@ -1,18 +1,34 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
-  UnprocessableEntityException,
+  OnModuleInit,
 } from '@nestjs/common';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { FinnhubService } from 'src/finnhub/finnhub.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StockData } from 'types/finnhub';
 
 @Injectable()
-export class StockService {
+export class StockService implements OnModuleInit {
+  private readonly logger = new Logger(StockService.name);
+
   constructor(
     private readonly finnhubService: FinnhubService,
     private readonly prismaService: PrismaService,
+    private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
+
+  async onModuleInit() {
+    const watchedStocks = await this.prismaService.stock.findMany({
+      select: { symbol: true },
+      distinct: ['symbol'],
+    });
+
+    for (const { symbol } of watchedStocks) {
+      this._registerInterval(symbol);
+    }
+  }
 
   private _calculateMovingAverage(last10Prices: number[]): number | null {
     if (last10Prices.length < 10) return null;
@@ -22,34 +38,62 @@ export class StockService {
     );
   }
 
-  // TODO: use nestjs scheduler to get stock data every 1 minute
-  async startWatchingStock(symbol: string): Promise<void> {}
+  private _registerInterval(symbol: string) {
+    if (this.schedulerRegistry.doesExist('interval', symbol)) return;
+
+    const interval = setInterval(() => {
+      this.logger.log(`Fetching stock data for symbol ${symbol}`);
+      this._fetchAndSaveStockData(symbol).catch((err) =>
+        this.logger.error(`Failed to fetch symbol ${symbol}: ${err}`),
+      );
+    }, 60_000);
+
+    this.schedulerRegistry.addInterval(symbol, interval);
+    this.logger.log(`Registered interval for symbol ${symbol}`);
+  }
+
+  private async _fetchAndSaveStockData(symbol: string) {
+    const stockData = await this.finnhubService.getQuote(symbol);
+    await this.prismaService.stock.create({
+      data: {
+        symbol,
+        price: stockData.c,
+        change: stockData.d ?? 0,
+        percentChange: stockData.dp ?? 0,
+        highPrice: stockData.h,
+        lowPrice: stockData.l,
+        openPrice: stockData.o,
+        previousClosePrice: stockData.pc,
+        fetchedAt: new Date(),
+      },
+    });
+  }
+
+  async startWatchingStock(symbol: string) {
+    await this._fetchAndSaveStockData(symbol);
+    this._registerInterval(symbol);
+  }
 
   async getStockData(symbol: string): Promise<StockData> {
-    const stock = await this.prismaService.stock.findMany({
+    const stocks = await this.prismaService.stock.findMany({
       where: { symbol },
       orderBy: { fetchedAt: 'desc' },
       take: 10,
     });
 
-    if (!stock?.length) {
+    if (!stocks?.length) {
       throw new NotFoundException('Stock not found');
     }
 
     const movingAverage = this._calculateMovingAverage(
-      stock.map((s) => s.price),
+      stocks.map((s) => s.price),
     );
-
-    if (!movingAverage)
-      throw new UnprocessableEntityException(
-        'Not enough prices to calculate moving average',
-      );
 
     return {
       symbol,
-      currentPrice: stock[stock.length - 1].price,
+      currentPrice: stocks[0].price,
       movingAverage,
-      fetchedAt: stock[stock.length - 1].fetchedAt,
+      fetchedAt: stocks[0].fetchedAt,
     };
   }
 }

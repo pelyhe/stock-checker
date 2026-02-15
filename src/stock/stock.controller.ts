@@ -12,7 +12,10 @@ export class StockController {
   }
 
   @Put(':symbol')
-  async startWatchingStock(@Param('symbol') symbol: string): Promise<void> {
-    return await this.stockService.startWatchingStock(symbol);
+  async startWatchingStock(
+    @Param('symbol') symbol: string,
+  ): Promise<{ message: string }> {
+    await this.stockService.startWatchingStock(symbol);
+    return { message: `${symbol} is now being watched` };
   }
 }
