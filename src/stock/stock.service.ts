@@ -7,7 +7,7 @@ import {
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { FinnhubService } from 'src/finnhub/finnhub.service';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { StockData } from 'types/finnhub';
+import { StockData } from 'types/stock';
 
 @Injectable()
 export class StockService implements OnModuleInit {
